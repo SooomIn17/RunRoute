@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
   Marker,
@@ -51,6 +51,14 @@ export default function HomeScreen(){
 
   const totalDistance = calculateTotalDistance();
 
+  const undoLastPoint = () => {
+    setPoints((prev) => prev.slice(0, -1));
+  };
+
+  const resetRoute = () => {
+    setPoints([]);
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -88,6 +96,16 @@ export default function HomeScreen(){
             {totalDistance.toFixed(2)} km
           </Text>
         </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={undoLastPoint}>
+            <Text style={styles.buttonText}>Undo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={resetRoute}>
+            <Text style={styles.buttonText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
     </View>
   );
 }
@@ -122,5 +140,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 24,
     fontWeight: "bold",
+  },
+
+  buttonContainer: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  button: {
+    flex: 1,
+    backgroundColor: "white",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    elevation: 5,
+  },
+
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
