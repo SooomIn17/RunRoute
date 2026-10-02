@@ -1,4 +1,5 @@
-import { useState } from "react";
+import * as Location from "expo-location";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
@@ -13,6 +14,27 @@ type Coordinate = {
 
 export default function HomeScreen(){
   const [points, setPoints] = useState<Coordinate[]>([]);
+  const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
+
+  useEffect(() => {
+    const getCurrentLocation = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        console.log("Location permission denied");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    };
+
+    getCurrentLocation();
+  }, []);
 
   const handleMapPress = (event: MapPressEvent) => {
     const coordinate = event.nativeEvent.coordinate;
@@ -70,7 +92,13 @@ export default function HomeScreen(){
             longitudeDelta: 0.02,
           }}
           onPress={handleMapPress}
+          showsUserLocation={true}        // 현재 위치 표시
       >
+        {currentLocation && (
+          <Marker coordinate={currentLocation}
+          />
+        )}
+        
         {points.map((point, index) => (
           <Marker
               key={index}
