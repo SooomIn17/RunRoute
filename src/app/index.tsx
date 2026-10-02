@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
@@ -27,10 +27,22 @@ export default function HomeScreen(){
 
       const location = await Location.getCurrentPositionAsync({});
 
+      // 현재 위치
       setCurrentLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
+
+      // 처음부터 현재 위치 중심으로 열리기
+      mapRef.current?.animateToRegion(
+        {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        1000
+      );
     };
 
     getCurrentLocation();
@@ -81,9 +93,12 @@ export default function HomeScreen(){
     setPoints([]);
   };
 
+  const mapRef = useRef<MapView>(null);
+
   return (
     <View style={styles.container}>
       <MapView
+          ref={mapRef}
           style={styles.map}
           initialRegion={{
             latitude: 36.019,
