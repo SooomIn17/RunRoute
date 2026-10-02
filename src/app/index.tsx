@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
   Marker,
@@ -15,6 +15,9 @@ type Coordinate = {
 export default function HomeScreen(){
   const [points, setPoints] = useState<Coordinate[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
+  const [targetDistance, setTargetDistance] = useState("");
+
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     const getCurrentLocation = async () => {
@@ -85,6 +88,10 @@ export default function HomeScreen(){
 
   const totalDistance = calculateTotalDistance();
 
+  const target = parseFloat(targetDistance);
+
+  const remainingDistance = !isNaN(target) ? target - totalDistance : null;
+  
   const undoLastPoint = () => {
     setPoints((prev) => prev.slice(0, -1));
   };
@@ -93,7 +100,6 @@ export default function HomeScreen(){
     setPoints([]);
   };
 
-  const mapRef = useRef<MapView>(null);
 
   return (
     <View style={styles.container}>
@@ -108,12 +114,7 @@ export default function HomeScreen(){
           }}
           onPress={handleMapPress}
           showsUserLocation={true}        // 현재 위치 표시
-      >
-        {currentLocation && (
-          <Marker coordinate={currentLocation}
-          />
-        )}
-        
+      >        
         {points.map((point, index) => (
           <Marker
               key={index}
@@ -138,6 +139,28 @@ export default function HomeScreen(){
           <Text style={styles.distanceValue}>
             {totalDistance.toFixed(2)} km
           </Text>
+
+          <View style={styles.inputRow}>
+            <TextInput
+                style={styles.input}
+                placeholder="Target distance (km)"
+                keyboardType="decimal-pad"
+                value={targetDistance}
+                onChangeText={setTargetDistance}
+            />
+
+            <TouchableOpacity style={styles.doneButton} onPress={Keyboard.dismiss}>
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+
+          {remainingDistance !== null && (
+            <Text style={styles.remainingText}>
+              {remainingDistance > 0
+                ? `${remainingDistance.toFixed(2)} km remaining`
+                : `${Math.abs(remainingDistance).toFixed(2)} km over target`}
+            </Text>
+          )}
         </View>
 
         <View style={styles.buttonContainer}>
@@ -206,5 +229,39 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  input: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 10,
+    fontSize: 16,
+  },
+
+  inputRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  doneButton: {
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#ccc"
+  },
+
+  doneButtonText: {
+    fontWeight: "600",
+  },
+
+  remainingText: {
+    marginTop: 8,
+    fontSize: 14,
   },
 });
