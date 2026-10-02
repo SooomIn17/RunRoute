@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import MapView, {
   MapPressEvent,
   Marker,
@@ -9,7 +9,8 @@ import MapView, {
 type Coordinate = {
   latitude: number;
   longitude: number;
-}
+};
+
 export default function HomeScreen(){
   const [points, setPoints] = useState<Coordinate[]>([]);
 
@@ -17,6 +18,38 @@ export default function HomeScreen(){
     const coordinate = event.nativeEvent.coordinate;
     setPoints((prev) => [...prev, coordinate]);
   };
+
+  const calculateDistance = (
+    point1: Coordinate,
+    point2: Coordinate
+  ) => {
+    const earthRadius = 6371;     // km
+
+    const lat1 = (point1.latitude * Math.PI) / 180;
+    const lat2 = (point2.latitude * Math.PI) / 180;
+
+    const deltaLat = ((point2.latitude - point1.latitude) * Math.PI) /180;
+    const deltaLon = ((point2.longitude - point1.longitude) * Math.PI) / 180;
+
+    const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    
+    return earthRadius * c;
+  };
+
+  const calculateTotalDistance = () => {
+    let total = 0;
+
+    for (let i = 0; i < points.length - 1; i++){
+      total += calculateDistance(
+        points[i], points[i+1]
+      );
+    }
+
+    return total;
+  };
+
+  const totalDistance = calculateTotalDistance();
 
   return (
     <View style={styles.container}>
@@ -45,6 +78,16 @@ export default function HomeScreen(){
           />
         )}
         </MapView>
+
+        <View style={styles.distanceBox}>
+          <Text style={styles.distanceLabel}>
+            Estimated Distance
+          </Text>
+
+          <Text style={styles.distanceValue}>
+            {totalDistance.toFixed(2)} km
+          </Text>
+        </View>
     </View>
   );
 }
@@ -53,8 +96,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  
   map: {
     width: "100%",
     height: "100%",
+  },
+
+  distanceBox: {
+    position: "absolute",
+    top: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: "white",
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    elevation: 5,
+  },
+
+  distanceLabel: {
+    fontSize: 14,
+  },
+
+  distanceValue: {
+    marginTop: 4,
+    fontSize: 24,
+    fontWeight: "bold",
   },
 });
