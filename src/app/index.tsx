@@ -35,6 +35,8 @@ export default function HomeScreen(){
   const [routeDistance, setRouteDistance] = useState<number>(0);
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
+  const [isBuildingRoute, setIsBuildingRoute] = useState(false);
+  const [routeError, setRouteError] = useState("");
   
   const mapRef = useRef<MapView>(null);
 
@@ -141,7 +143,7 @@ export default function HomeScreen(){
   // 실제 도보 경로 계산(API 호출)
   const fetchRoute = async () => {
     if (points.length < 2) {
-      console.log("At least two waypoints are required");
+      setRouteError("Select at least two waypoints.");
       return;
     }
 
@@ -150,7 +152,7 @@ export default function HomeScreen(){
       return;
     }
 
-    const origin = points[0];     // 출발지
+    const origin = points[0];                         // 출발지
     const destination = points[points.length - 1];    // 도착지
     const intermediatePoints = points.slice(1, -1);   // 중간 경유지
 
@@ -160,7 +162,11 @@ export default function HomeScreen(){
       return;
     }
 
-    // 요청 Query String 생성 (x: 경도, y: 위도)
+    // 로딩 시작/기존 오류 초기화
+    setIsBuildingRoute(true);
+    setRouteError("");
+
+    // Query String 생성 (x: 경도, y: 위도)
     const params = new URLSearchParams({
       start_x:origin.longitude.toString(),
       start_y:origin.latitude.toString(),
@@ -179,6 +185,7 @@ export default function HomeScreen(){
         intermediatePoints.map((point) => point.latitude).join(","));
     }
 
+    // 카카오 도보 경로 API 호출
     try {
       const response = await fetch(
         `https://dapi.kakao.com/v2/routing/walk?${params.toString()}`,
@@ -193,6 +200,7 @@ export default function HomeScreen(){
       const data = await response.json();
 
       if(!response.ok) {
+        setRouteError("Failed to load walking route.");
         console.log(
           "Kakao Routes API error:",
           JSON.stringify(data, null, 2)
@@ -243,13 +251,16 @@ export default function HomeScreen(){
       });
 
       if (coordinates.length < 2) {
-        console.log("Route coordinates are missing");
+        setRouteError("Route coordinates are missing.");
         return;
       }
 
-      setRouteCoordinates(coordinates);
+      setRouteCoordinates(coordinates);     // 지도에 실제 경로 표시
     } catch (error) {
-      console.log("Kakao route request failed:",error);
+      setRouteError("Failed to build route.");
+      console.log("Kakao route request failed:", error);
+    } finally {
+      setIsBuildingRoute(false);    // 성공/실패 관계없이 로딩 종료
     }
   };
 
@@ -445,6 +456,10 @@ export default function HomeScreen(){
                 : `${Math.abs(remainingDistance).toFixed(2)} km over target`}
             </Text>
           )}
+
+          {routeError !== "" && (
+            <Text style={styles.errorText}>{routeError}</Text>
+          )}
         </View>
 
         {/*경로 제어 버튼*/}
@@ -459,8 +474,17 @@ export default function HomeScreen(){
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.buildRouteButton} onPress={fetchRoute}>
-              <Text style={styles.buildRouteButtonText}>Build Route</Text>
+          <TouchableOpacity 
+            style={[
+              styles.buildRouteButton,
+              (points.length < 2 || isBuildingRoute) && styles.disabledButton,
+            ]} 
+            onPress={fetchRoute}
+            disabled={points.length < 2 || isBuildingRoute}
+          >
+              <Text style={styles.buildRouteButtonText}>
+                {isBuildingRoute ? "Building Route..." : "Build Route"}
+              </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.saveRouteButton} onPress={handleSaveRoute}>
@@ -706,5 +730,15 @@ const styles = StyleSheet.create({
   remainingText: {
     marginTop: 8,
     fontSize: 14,
+  },
+
+  disabledButton: {
+    opacity: 0.5,
+  },
+
+  errorText: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
   },
 });
