@@ -330,6 +330,21 @@ export default function HomeScreen(){
     }
   };
 
+  // 저장된 코스 삭제
+  const deleteRoute = async (routeId: string) => {
+    try {
+      const updatedRoutes = savedRoutes.filter(
+        (route) => route.id !== routeId
+      );
+
+      await AsyncStorage.setItem("savedRoutes", JSON.stringify(updatedRoutes));
+
+      setSavedRoutes(updatedRoutes);
+    } catch (error) {
+      console.log("Failed to delete route:", error);
+    }
+  };
+
   // UI
   return (
     <View style={styles.container}>
@@ -443,14 +458,25 @@ export default function HomeScreen(){
             <Text style={styles.emptyText}>No saved routes</Text>
           ):(
             savedRoutes.map((route) => (
-              <TouchableOpacity
+              <View
                   key={route.id}
                   style={styles.savedRouteItem}
-                  onPress={() => loadRoute(route)}
               >
-                <Text style={styles.savedRouteName}>{route.name}</Text>
-                <Text style={styles.savedRouteInfo}>{route.distance.toFixed(2)} km</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.savedRouteContent} 
+                  onPress={() => loadRoute(route)}
+                >
+                  <Text style={styles.savedRouteName}>{route.name}</Text>
+                  <Text style={styles.savedRouteInfo}>{route.distance.toFixed(2)} km</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteRoute(route.id)}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity> 
+              </View>
             ))
           )}
           </View>
@@ -611,9 +637,25 @@ const styles = StyleSheet.create({
   },
 
   savedRouteItem: {
-    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    paddingVertical: 12,
+  },
+
+  savedRouteContent: {
+    flex: 1,
+  },
+
+  deleteButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 
   savedRouteName: {
