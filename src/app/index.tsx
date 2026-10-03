@@ -37,6 +37,7 @@ export default function HomeScreen(){
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
   const [isBuildingRoute, setIsBuildingRoute] = useState(false);
   const [routeError, setRouteError] = useState("");
+  const [movingWaypointIndex, setMovingWaypointIndex] = useState<number | null>(null);
   
   const mapRef = useRef<MapView>(null);
 
@@ -95,7 +96,26 @@ export default function HomeScreen(){
   // 지도 터치 시 경유지 추가
   const handleMapPress = (event: MapPressEvent) => {
     const coordinate = event.nativeEvent.coordinate;
-    setPoints((prev) => [...prev, coordinate]);
+    
+    // 마커 이동 모드라면 새 위치로 이동
+    if (movingWaypointIndex !== null) {
+      setPoints((prev) =>
+        prev.map((point, index) =>
+          index === movingWaypointIndex ? coordinate : point
+        )
+      );
+      
+      // 경유지 변경 시 기존 실제 경로 초기화
+      setRouteCoordinates([]);
+      setRouteDistance(0);
+
+      setMovingWaypointIndex(null);       // 이동 모드 종료
+
+      return;
+    }
+
+    // 일반 모드라면 새 경유지 추가
+    setPoints((prev) => [...prev, coordinate,]);
 
     // 경유지 변경 시 기존 실제 경로 초기화
     setRouteCoordinates([]);
@@ -406,6 +426,11 @@ export default function HomeScreen(){
               key={index}
               coordinate={point}
               title={`Waypoint ${index + 1}`}
+              description="Tap to move"
+              stopPropagation={true}
+              onPress={() => {
+                setMovingWaypointIndex(index);
+              }}
           />
         ))}
 
@@ -461,6 +486,12 @@ export default function HomeScreen(){
 
           {routeError !== "" && (
             <Text style={styles.errorText}>{routeError}</Text>
+          )}
+
+          {movingWaypointIndex !== null && (
+            <Text style={styles.moveWaypointText}>
+              Moving Waypoint {movingWaypointIndex + 1} - tap a new location
+            </Text>
           )}
         </View>
 
@@ -576,6 +607,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 13,
     color: "#666",
+  },
+
+  moveWaypointText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   bottomControls: {
