@@ -33,8 +33,29 @@ export default function HomeScreen(){
   const [targetDistance, setTargetDistance] = useState("");
   const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
   const [routeDistance, setRouteDistance] = useState<number>(0);
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
+  const [showSavedRoutes, setShowSavedRoutes] = useState(false);
   
   const mapRef = useRef<MapView>(null);
+
+  // 저장된 코스 목록 불러오기
+  const loadSavedRoutes = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("savedRoutes");
+
+      const routes: SavedRoute[] = saved
+        ? JSON.parse(saved)
+        : [];
+      
+      setSavedRoutes(routes);
+    } catch (error) {
+      console.log("Failed to load saved routes:", error);
+    }
+  };
+  
+  useEffect(() => {
+    loadSavedRoutes();
+  }, []);
 
   // 현재 위치 가져오기
   useEffect(() => {
@@ -115,7 +136,7 @@ export default function HomeScreen(){
 
   // 목표 거리 계산
   const target = parseFloat(targetDistance);
-  const remainingDistance = !isNaN(target) ? target - totalDistance : null;
+  const remainingDistance = !isNaN(target) ? target - routeDistance : null;
 
   // 실제 도보 경로 계산(API 호출)
   const fetchRoute = async () => {
@@ -277,9 +298,35 @@ export default function HomeScreen(){
         "savedRoutes", JSON.stringify(updatedRoutes)
       );
 
+      setSavedRoutes(updatedRoutes);
+
       console.log("Route saved:", newRoute);
     } catch (error) {
       console.log("Failed to save route:", error);
+    }
+  };
+
+  // 저장된 코스 불러오기
+  const loadRoute = (route: SavedRoute) => {
+    setPoints(route.points);
+    setRouteCoordinates(route.routeCoordinates);
+    setRouteDistance(route.distance);
+
+    setShowSavedRoutes(false);
+
+    if(route.routeCoordinates.length > 0) {
+      mapRef.current?.fitToCoordinates(
+        route.routeCoordinates,
+        {
+          edgePadding: {
+            top: 100,
+            right: 50,
+            bottom: 200,
+            left: 50,
+          },
+          animated: true,
+        }
+      );
     }
   };
 
@@ -376,8 +423,39 @@ export default function HomeScreen(){
           <TouchableOpacity style={styles.saveRouteButton} onPress={saveRoute}>
             <Text style={styles.saveRouteButtonText}>Save Route</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.saveRouteButton} onPress={() => setShowSavedRoutes(true)}>
+            <Text style={styles.saveRouteButtonText}>Saved Routes</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+
+        {showSavedRoutes && (
+          <View style={styles.savedRoutesPanel}>
+            <View style={styles.savedRoutesHeader}>
+              <Text style={styles.savedRoutesTitle}>Saved Routes</Text>
+
+              <TouchableOpacity onPress={() => setShowSavedRoutes(false)}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+          {savedRoutes.length === 0 ? (
+            <Text style={styles.emptyText}>No saved routes</Text>
+          ):(
+            savedRoutes.map((route) => (
+              <TouchableOpacity
+                  key={route.id}
+                  style={styles.savedRouteItem}
+                  onPress={() => loadRoute(route)}
+              >
+                <Text style={styles.savedRouteName}>{route.name}</Text>
+                <Text style={styles.savedRouteInfo}>{route.distance.toFixed(2)} km</Text>
+              </TouchableOpacity>
+            ))
+          )}
+          </View>
+        )}
+    </View>
   );
 }
 
@@ -470,7 +548,7 @@ const styles = StyleSheet.create({
   },
 
   saveRouteButtonText: {
-    fontSize: 26,
+    fontSize: 16,
     fontWeight: "600",
   },
 
@@ -501,6 +579,58 @@ const styles = StyleSheet.create({
 
   doneButtonText: {
     fontWeight: "600",
+  },
+
+  savedRoutesPanel: {
+    position: "absolute",
+    top: 120,
+    left: 20,
+    right: 20,
+    bottom: 180,
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    elevation: 8,
+  },
+
+  savedRoutesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  savedRoutesTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+
+  closeButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  savedRouteItem: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+
+  savedRouteName: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  savedRouteInfo: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#666",
+  },
+
+  emptyText: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "#666",
   },
 
   remainingText: {
