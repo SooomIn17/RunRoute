@@ -281,6 +281,11 @@ export default function HomeScreen(){
             {routeDistance.toFixed(2)} km
           </Text>
 
+          {/*경유지 개수*/}
+          <Text style={styles.waypointText}>
+            {points.length} waypoints selected
+          </Text>
+          
           {/*목표 거리 입력*/}
           <View style={styles.inputRow}>
             <TextInput
@@ -308,18 +313,18 @@ export default function HomeScreen(){
 
         {/*경로 제어 버튼*/}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={undoLastPoint}>
-            <Text style={styles.buttonText}>Undo</Text>
+          <TouchableOpacity style={styles.secondaryButton} onPress={undoLastPoint}>
+            <Text style={styles.secondaryButtonText}>Undo</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={resetRoute}>
-            <Text style={styles.buttonText}>Reset</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.button} onPress={fetchRoute}>
-            <Text style={styles.buttonText}>Build Route</Text>
+          <TouchableOpacity style={styles.secondaryButton} onPress={resetRoute}>
+            <Text style={styles.secondaryButtonText}>Reset</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={styles.buildRouteButton} onPress={fetchRoute}>
+            <Text style={styles.buildRouteButtonText}>Build Route</Text>
+        </TouchableOpacity>
     </View>
   );
 }
@@ -357,27 +362,51 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
+  waypointText: {
+    marginTop: 6,
+    fontSize: 13,
+    color: "#666",
+  },
+
   buttonContainer: {
     position: "absolute",
-    bottom: 40,
+    bottom: 105,
     left: 20,
     right: 20,
     flexDirection: "row",
     gap: 12,
   },
 
-  button: {
+  secondaryButton: {
     flex: 1,
     backgroundColor: "white",
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 14,
+    alignItems: "center",
+    elevation: 4,
+  },
+
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  buildRouteButton: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    backgroundColor: "#111",
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: "center",
     elevation: 5,
   },
 
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
+  buildRouteButtonText: {
+    color: "white",
+    fontSize: 17,
+    fontWeight: "700",
   },
 
   input: {
