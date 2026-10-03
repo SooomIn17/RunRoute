@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MapView, {
   MapPressEvent,
   Marker,
@@ -269,8 +269,33 @@ export default function HomeScreen(){
     setRouteDistance(0);
   };
 
+  // 저장 버튼 클릭 시 이름 입력 팝업
+  const handleSaveRoute = () => {
+    if (routeCoordinates.length < 2) {
+      console.log("저장할 경로가 없습니다.");
+      return;
+    }
+
+    Alert.prompt("Save Route", "Enter a route name",
+      [
+        {
+          text:"Cancel",
+          style:"cancel",
+        },
+        {
+          text:"Save",
+          onPress: (name?: string) => {
+            saveRoute(name ?? "");
+          },
+        },
+      ],
+      "plain-text",
+      "",
+      "default"
+    );
+  };
   // 현재 코스 저장
-  const saveRoute = async () => {
+  const saveRoute = async (name: string) => {
     if (routeCoordinates.length < 2) {
       console.log("저장할 경로가 없습니다.");
       return;
@@ -278,7 +303,10 @@ export default function HomeScreen(){
 
     const newRoute: SavedRoute = {
       id:Date.now().toString(),
-      name:`Route ${new Date().toLocaleString()}`,
+      name:
+        name.trim() !== ""
+          ? name.trim()
+          : `Route ${new Date().toLocaleString()}`,
       points,
       routeCoordinates,
       distance:routeDistance,
@@ -435,7 +463,7 @@ export default function HomeScreen(){
               <Text style={styles.buildRouteButtonText}>Build Route</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.saveRouteButton} onPress={saveRoute}>
+          <TouchableOpacity style={styles.saveRouteButton} onPress={handleSaveRoute}>
             <Text style={styles.saveRouteButtonText}>Save Route</Text>
           </TouchableOpacity>
 
