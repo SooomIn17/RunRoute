@@ -452,8 +452,10 @@ export default function HomeScreen(){
           {remainingDistance !== null && (
             <Text style={styles.remainingText}>
               {remainingDistance > 0
-                ? `${remainingDistance.toFixed(2)} km remaining`
-                : `${Math.abs(remainingDistance).toFixed(2)} km over target`}
+                ? `${remainingDistance.toFixed(2)} km shorter than target`
+                : remainingDistance < 0
+                ? `${Math.abs(remainingDistance).toFixed(2)} km longer than target`
+                : "Target distance matched"}
             </Text>
           )}
 
