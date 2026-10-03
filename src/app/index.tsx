@@ -421,18 +421,35 @@ export default function HomeScreen(){
           showsUserLocation={true}        // 현재 위치 표시
       > 
         {/*선택한 경유지*/}       
-        {points.map((point, index) => (
-          <Marker
-              key={index}
-              coordinate={point}
-              title={`Waypoint ${index + 1}`}
-              description="Tap to move"
-              stopPropagation={true}
-              onPress={() => {
-                setMovingWaypointIndex(index);
-              }}
-          />
-        ))}
+        {points.map((point, index) => {
+          const isStart = index === 0;
+          const isEnd = index === points.length - 1;
+          const isMoving = movingWaypointIndex === index;
+
+          return (
+            <Marker
+                key={index}
+                coordinate={point}
+                stopPropagation={true}
+                onPress={() => {
+                  setMovingWaypointIndex(index);
+                }}
+            >
+              <View
+                style={[
+                  styles.customMarker,
+                  isStart && styles.startMarker,
+                  isEnd && styles.endMarker,
+                  isMoving && styles.movingMarker,
+                ]}
+              >
+                <Text style={styles.markerText}>
+                  {isStart ? "S" : isEnd ? "E" : index + 1}
+                </Text>
+              </View>
+            </Marker>   
+          );
+        })}
 
         {/*실제 도로 경로*/}
         {routeCoordinates.length >= 2 && (
@@ -780,5 +797,37 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     textAlign: "center",
+  },
+
+  customMarker: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "white",
+    borderWidth: 2,
+    borderColor: "#777",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+  },
+
+  startMarker: {
+    borderColor: "#2E7D32",
+    backgroundColor: "#E8F5E9",
+  },
+
+  endMarker: {
+    borderColor: "#C62828",
+    backgroundColor: "#FFEBEE"
+  },
+
+  movingMarker: {
+    borderWidth: 3,
+    borderColor: "#1565C0"
+  },
+
+  markerText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
