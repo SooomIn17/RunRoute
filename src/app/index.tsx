@@ -7,18 +7,25 @@ import MapView, {
   Polyline,
 } from "react-native-maps";
 
+const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
+
+// 지도 좌표 타입 정의
 type Coordinate = {
   latitude: number;
   longitude: number;
 };
 
 export default function HomeScreen(){
+  // 상태 관리
   const [points, setPoints] = useState<Coordinate[]>([]);
   const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
   const [targetDistance, setTargetDistance] = useState("");
-
+  const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
+  const [routeDistance, setRouteDistance] = useState<number>(0);
+  
   const mapRef = useRef<MapView>(null);
 
+  // 현재 위치 가져오기
   useEffect(() => {
     const getCurrentLocation = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -51,11 +58,13 @@ export default function HomeScreen(){
     getCurrentLocation();
   }, []);
 
+  // 지도 터치 시 경유지 추가
   const handleMapPress = (event: MapPressEvent) => {
     const coordinate = event.nativeEvent.coordinate;
     setPoints((prev) => [...prev, coordinate]);
   };
 
+  // 두 좌표 사이 직선 거리 계산
   const calculateDistance = (
     point1: Coordinate,
     point2: Coordinate
@@ -74,6 +83,7 @@ export default function HomeScreen(){
     return earthRadius * c;
   };
 
+  // 전체 경유지 직선 거리 합산
   const calculateTotalDistance = () => {
     let total = 0;
 
@@ -86,23 +96,143 @@ export default function HomeScreen(){
     return total;
   };
 
-  const totalDistance = calculateTotalDistance();
+  const totalDistance = calculateTotalDistance();   // 직선 기준 전체 거리
 
+  // 목표 거리 계산
   const target = parseFloat(targetDistance);
-
   const remainingDistance = !isNaN(target) ? target - totalDistance : null;
-  
+
+  // 실제 도보 경로 계산(API 호출)
+  const fetchRoute = async () => {
+    if (points.length < 2) {
+      console.log("At least two waypoints are required");
+      return;
+    }
+
+    if (!KAKAO_REST_API_KEY) {
+      console.log("Kakao REST API key is missing");
+      return;
+    }
+
+    const origin = points[0];     // 출발지
+    const destination = points[points.length - 1];    // 도착지
+    const intermediatePoints = points.slice(1, -1);   // 중간 경유지
+
+    // 경유지 최대 5개까지 지원
+    if (intermediatePoints.length > 5) {
+      console.log("Kakao walking route supports up to 5 waypoints");
+      return;
+    }
+
+    // 요청 Query String 생성 (x: 경도, y: 위도)
+    const params = new URLSearchParams({
+      start_x:origin.longitude.toString(),
+      start_y:origin.latitude.toString(),
+      end_x:destination.longitude.toString(),
+      end_y:destination.latitude.toString(),
+      input_coord:"WGS84",
+      output_coord:"WGS84",
+      route_mode:"SHORTEST",
+    });
+
+    // 경유지 있으면 추가
+    if (intermediatePoints.length > 0) {
+      params.append("via_x", 
+        intermediatePoints.map((point) => point.longitude).join(","));
+      params.append("via_y",
+        intermediatePoints.map((point) => point.latitude).join(","));
+    }
+
+    try {
+      const response = await fetch(
+        `https://dapi.kakao.com/v2/routing/walk?${params.toString()}`,
+        {
+          method:"GET",
+          headers: {
+            Authorization:`KakaoAK ${KAKAO_REST_API_KEY}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if(!response.ok) {
+        console.log(
+          "Kakao Routes API error:",
+          JSON.stringify(data, null, 2)
+        );
+        return;
+      }
+
+      // 경로 탐색 실패 상태 확인
+      if (data.status !== "OK") {
+        console.log("No walking route found:", data.status);
+        return;
+      }
+
+      const route = data.route;
+
+      if (!route) {
+        console.log("Route data is missing");
+        return;
+      }
+
+      // 실제 도보 거리 저장(meter -> km)
+      const totalDistance = route.properties?.totalDistance;
+
+      if (typeof totalDistance === "number") {
+        setRouteDistance(totalDistance / 1000);
+      }
+
+      // 실제 도보 경로 좌표 추출
+      const coordinates:Coordinate[] = [];
+
+      route.legs?.forEach((leg:any) => {
+        leg.steps?.forEach((step:any) => {
+          const pathPoints = step.path?.points;
+
+          if (!Array.isArray(pathPoints)) {
+            return;
+          }
+
+          pathPoints.forEach(
+            ([longitude, latitude]:[number, number]) => {
+              coordinates.push({
+                latitude,
+                longitude,
+              });
+            }
+          );
+        });
+      });
+
+      if (coordinates.length < 2) {
+        console.log("Route coordinates are missing");
+        return;
+      }
+
+      setRouteCoordinates(coordinates);
+    } catch (error) {
+      console.log("Kakao route request failed:",error);
+    }
+  };
+
+  // 마지막 경유지 삭제
   const undoLastPoint = () => {
     setPoints((prev) => prev.slice(0, -1));
   };
 
+  // 전체 경로 초기화
   const resetRoute = () => {
     setPoints([]);
+    setRouteCoordinates([]);
+    setRouteDistance(0);
   };
 
-
+  // UI
   return (
     <View style={styles.container}>
+      {/* 지도 */}
       <MapView
           ref={mapRef}
           style={styles.map}
@@ -114,7 +244,8 @@ export default function HomeScreen(){
           }}
           onPress={handleMapPress}
           showsUserLocation={true}        // 현재 위치 표시
-      >        
+      > 
+        {/*선택한 경유지*/}       
         {points.map((point, index) => (
           <Marker
               key={index}
@@ -123,23 +254,26 @@ export default function HomeScreen(){
           />
         ))}
 
-        {points.length >= 2 && (
+        {/*실제 도로 경로*/}
+        {routeCoordinates.length >= 2 && (
           <Polyline
-              coordinates={points}
+              coordinates={routeCoordinates}
               strokeWidth={4}
           />
         )}
         </MapView>
 
+        {/*거리 정보*/}
         <View style={styles.distanceBox}>
           <Text style={styles.distanceLabel}>
             Estimated Distance
           </Text>
 
           <Text style={styles.distanceValue}>
-            {totalDistance.toFixed(2)} km
+            {routeDistance.toFixed(2)} km
           </Text>
 
+          {/*목표 거리 입력*/}
           <View style={styles.inputRow}>
             <TextInput
                 style={styles.input}
@@ -154,6 +288,7 @@ export default function HomeScreen(){
             </TouchableOpacity>
           </View>
 
+          {/*목표까지 남은 거리*/}
           {remainingDistance !== null && (
             <Text style={styles.remainingText}>
               {remainingDistance > 0
@@ -163,6 +298,7 @@ export default function HomeScreen(){
           )}
         </View>
 
+        {/*경로 제어 버튼*/}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={undoLastPoint}>
             <Text style={styles.buttonText}>Undo</Text>
@@ -171,11 +307,16 @@ export default function HomeScreen(){
           <TouchableOpacity style={styles.button} onPress={resetRoute}>
             <Text style={styles.buttonText}>Reset</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={fetchRoute}>
+            <Text style={styles.buttonText}>Build Route</Text>
+          </TouchableOpacity>
         </View>
     </View>
   );
 }
 
+// 스타일
 const styles = StyleSheet.create({
   container: {
     flex: 1,
