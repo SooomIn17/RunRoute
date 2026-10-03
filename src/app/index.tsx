@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
 import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -13,6 +14,16 @@ const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 type Coordinate = {
   latitude: number;
   longitude: number;
+};
+
+// 로컬 저장
+type SavedRoute = {
+  id: string;
+  name: string;
+  points: Coordinate[];
+  routeCoordinates: Coordinate[];
+  distance: number;
+  createdAt: string;
 };
 
 export default function HomeScreen(){
@@ -237,6 +248,41 @@ export default function HomeScreen(){
     setRouteDistance(0);
   };
 
+  // 현재 코스 저장
+  const saveRoute = async () => {
+    if (routeCoordinates.length < 2) {
+      console.log("저장할 경로가 없습니다.");
+      return;
+    }
+
+    const newRoute: SavedRoute = {
+      id:Date.now().toString(),
+      name:`Route ${new Date().toLocaleString()}`,
+      points,
+      routeCoordinates,
+      distance:routeDistance,
+      createdAt:new Date().toISOString(),
+    };
+
+    try {
+      const savedRoutes = await AsyncStorage.getItem("savedRoutes");
+
+      const routes:SavedRoute[] = savedRoutes
+        ? JSON.parse(savedRoutes)
+        : [];
+      
+      const updatedRoutes = [...routes, newRoute];
+
+      await AsyncStorage.setItem(
+        "savedRoutes", JSON.stringify(updatedRoutes)
+      );
+
+      console.log("Route saved:", newRoute);
+    } catch (error) {
+      console.log("Failed to save route:", error);
+    }
+  };
+
   // UI
   return (
     <View style={styles.container}>
@@ -312,20 +358,26 @@ export default function HomeScreen(){
         </View>
 
         {/*경로 제어 버튼*/}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.secondaryButton} onPress={undoLastPoint}>
-            <Text style={styles.secondaryButtonText}>Undo</Text>
+        <View style={styles.bottomControls}>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={undoLastPoint}>
+              <Text style={styles.secondaryButtonText}>Undo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={resetRoute}>
+              <Text style={styles.secondaryButtonText}>Reset</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.buildRouteButton} onPress={fetchRoute}>
+              <Text style={styles.buildRouteButtonText}>Build Route</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={resetRoute}>
-            <Text style={styles.secondaryButtonText}>Reset</Text>
+          <TouchableOpacity style={styles.saveRouteButton} onPress={saveRoute}>
+            <Text style={styles.saveRouteButtonText}>Save Route</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.buildRouteButton} onPress={fetchRoute}>
-            <Text style={styles.buildRouteButtonText}>Build Route</Text>
-        </TouchableOpacity>
-    </View>
+      </View>
   );
 }
 
@@ -368,11 +420,15 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 
-  buttonContainer: {
+  bottomControls: {
     position: "absolute",
-    bottom: 105,
+    bottom: 40,
     left: 20,
     right: 20,
+    gap: 10,
+  },
+
+  buttonContainer: {
     flexDirection: "row",
     gap: 12,
   },
@@ -392,10 +448,6 @@ const styles = StyleSheet.create({
   },
 
   buildRouteButton: {
-    position: "absolute",
-    bottom: 40,
-    left: 20,
-    right: 20,
     backgroundColor: "#111",
     paddingVertical: 16,
     borderRadius: 16,
@@ -407,6 +459,19 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 17,
     fontWeight: "700",
+  },
+
+  saveRouteButton: {
+    backgroundColor: "white",
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    elevation: 4,
+  },
+
+  saveRouteButtonText: {
+    fontSize: 26,
+    fontWeight: "600",
   },
 
   input: {
