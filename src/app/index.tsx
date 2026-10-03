@@ -62,6 +62,10 @@ export default function HomeScreen(){
   const handleMapPress = (event: MapPressEvent) => {
     const coordinate = event.nativeEvent.coordinate;
     setPoints((prev) => [...prev, coordinate]);
+
+    // 경유지 변경 시 기존 실제 경로 초기화
+    setRouteCoordinates([]);
+    setRouteDistance(0);
   };
 
   // 두 좌표 사이 직선 거리 계산
@@ -220,6 +224,10 @@ export default function HomeScreen(){
   // 마지막 경유지 삭제
   const undoLastPoint = () => {
     setPoints((prev) => prev.slice(0, -1));
+
+    // 경유지 변경 시 기존 실제 경로 초기화
+    setRouteCoordinates([]);
+    setRouteDistance(0);
   };
 
   // 전체 경로 초기화
