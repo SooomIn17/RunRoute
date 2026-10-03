@@ -462,9 +462,7 @@ export default function HomeScreen(){
 
         {/*거리 정보*/}
         <View style={styles.distanceBox}>
-          <Text style={styles.distanceLabel}>
-            Estimated Distance
-          </Text>
+          <Text style={styles.summaryTitle}>Route Summary</Text>
 
           <Text style={styles.distanceValue}>
             {routeDistance.toFixed(2)} km
@@ -474,6 +472,10 @@ export default function HomeScreen(){
           <Text style={styles.waypointText}>
             {points.length} waypoints selected
           </Text>
+          
+          <View style={styles.divider}/>
+
+          <Text style={styles.targetLabel}>Target Distance</Text>
           
           {/*목표 거리 입력*/}
           <View style={styles.inputRow}>
@@ -501,49 +503,66 @@ export default function HomeScreen(){
             </Text>
           )}
 
-          {routeError !== "" && (
-            <Text style={styles.errorText}>{routeError}</Text>
-          )}
-
           {movingWaypointIndex !== null && (
             <Text style={styles.moveWaypointText}>
               Moving Waypoint {movingWaypointIndex + 1} - tap a new location
             </Text>
           )}
+
+          
+          {routeError !== "" && (
+            <Text style={styles.errorText}>{routeError}</Text>
+          )}
         </View>
 
         {/*경로 제어 버튼*/}
         <View style={styles.bottomControls}>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.secondaryButton} onPress={undoLastPoint}>
-              <Text style={styles.secondaryButtonText}>Undo</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+                style={styles.tertiaryButton}
+                onPress={undoLastPoint}>
+                  <Text style={styles.tertiaryButtonText}>Undo</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={resetRoute}>
-              <Text style={styles.secondaryButtonText}>Reset</Text>
+            <TouchableOpacity
+                style={styles.tertiaryButton}
+                onPress={resetRoute}
+            >
+              <Text style={styles.tertiaryButtonText}>Reset</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
+          {/*메인 액션*/}
+          <TouchableOpacity
             style={[
-              styles.buildRouteButton,
-              (points.length < 2 || isBuildingRoute) && styles.disabledButton,
-            ]} 
+              styles.primaryButton,
+              (points.length < 2 || isBuildingRoute) &&
+                styles.disabledButton,
+            ]}
             onPress={fetchRoute}
             disabled={points.length < 2 || isBuildingRoute}
           >
-              <Text style={styles.buildRouteButtonText}>
-                {isBuildingRoute ? "Building Route..." : "Build Route"}
-              </Text>
+            <Text style={styles.primaryButtonText}>
+              {isBuildingRoute ? "Building Route...":"Build Route"}
+            </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.saveRouteButton} onPress={handleSaveRoute}>
-            <Text style={styles.saveRouteButtonText}>Save Route</Text>
-          </TouchableOpacity>
+          {/*저장 관련*/}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={handleSaveRoute}
+            >
+              <Text style={styles.secondaryButtonText}>Save Route</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.saveRouteButton} onPress={() => setShowSavedRoutes(true)}>
-            <Text style={styles.saveRouteButtonText}>Saved Routes</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => setShowSavedRoutes(true)}
+            >
+              <Text style={styles.secondaryButtonText}>Saved Routes</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {showSavedRoutes && (
@@ -610,14 +629,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  distanceLabel: {
+  summaryTitle: {
     fontSize: 14,
+    fontWeight: "600",
   },
 
   distanceValue: {
     marginTop: 4,
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 28,
+    fontWeight: "700",
   },
 
   waypointText: {
@@ -626,9 +646,22 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 
+  divider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 12,
+  },
+
+  targetLabel: {
+    alignSelf: "flex-start",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
   moveWaypointText: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     textAlign: "center",
   },
@@ -641,26 +674,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  buttonContainer: {
+  buttonRow: {
     flexDirection: "row",
     gap: 12,
   },
 
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: "white",
-    paddingVertical: 13,
-    borderRadius: 14,
-    alignItems: "center",
-    elevation: 4,
-  },
-
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  buildRouteButton: {
+  primaryButton: {
     backgroundColor: "#111",
     paddingVertical: 16,
     borderRadius: 16,
@@ -668,18 +687,49 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  buildRouteButtonText: {
+  primaryButtonText: {
     color: "white",
     fontSize: 17,
     fontWeight: "700",
   },
 
-  saveRouteButton: {
+  secondaryButton: {
+    flex: 1,
     backgroundColor: "white",
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 14,
     alignItems: "center",
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    elevation: 3,
+  },
+
+  secondaryButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  tertiaryButton: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  tertiaryButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  disabledButton: {
+    opacity: 0.5,
+  },
+
+  buildRouteButtonText: {
+    color: "white",
+    fontSize: 17,
+    fontWeight: "700",
   },
 
   saveRouteButtonText: {
@@ -787,10 +837,6 @@ const styles = StyleSheet.create({
   remainingText: {
     marginTop: 8,
     fontSize: 14,
-  },
-
-  disabledButton: {
-    opacity: 0.5,
   },
 
   errorText: {
