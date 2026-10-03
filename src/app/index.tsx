@@ -38,7 +38,7 @@ export default function HomeScreen(){
   const [isBuildingRoute, setIsBuildingRoute] = useState(false);
   const [routeError, setRouteError] = useState("");
   const [movingWaypointIndex, setMovingWaypointIndex] = useState<number | null>(null);
-  
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
 
   // 저장된 코스 목록 불러오기
@@ -109,6 +109,7 @@ export default function HomeScreen(){
       setRouteCoordinates([]);
       setRouteDistance(0);
 
+      setSelectedRouteId(null);           // 기존 저장 코스 선택 상태 해제
       setMovingWaypointIndex(null);       // 이동 모드 종료
 
       return;
@@ -120,6 +121,8 @@ export default function HomeScreen(){
     // 경유지 변경 시 기존 실제 경로 초기화
     setRouteCoordinates([]);
     setRouteDistance(0);
+
+    setSelectedRouteId(null);       // 기존 저장 코스 선택 상태 해제
   };
 
   // 두 좌표 사이 직선 거리 계산
@@ -291,6 +294,7 @@ export default function HomeScreen(){
     // 경유지 변경 시 기존 실제 경로 초기화
     setRouteCoordinates([]);
     setRouteDistance(0);
+    setSelectedRouteId(null);
   };
 
   // 전체 경로 초기화
@@ -298,6 +302,7 @@ export default function HomeScreen(){
     setPoints([]);
     setRouteCoordinates([]);
     setRouteDistance(0);
+    setSelectedRouteId(null);
   };
 
   // 저장 버튼 클릭 시 이름 입력 팝업
@@ -370,6 +375,7 @@ export default function HomeScreen(){
     setPoints(route.points);
     setRouteCoordinates(route.routeCoordinates);
     setRouteDistance(route.distance);
+    setSelectedRouteId(route.id);
 
     setShowSavedRoutes(false);
 
@@ -402,6 +408,23 @@ export default function HomeScreen(){
     } catch (error) {
       console.log("Failed to delete route:", error);
     }
+  };
+
+  // 전체 경로 화면 안에 맞추기
+  const fitRouteToScreen = () => {
+    if (routeCoordinates.length === 0) {
+      return;
+    }
+
+    mapRef.current?.fitToCoordinates(routeCoordinates, {
+      edgePadding: {
+        top: 120,
+        right: 40,
+        bottom: 260,
+        left: 40,
+      },
+      animated: true,
+    });
   };
 
   // UI
@@ -460,6 +483,18 @@ export default function HomeScreen(){
         )}
         </MapView>
 
+        {movingWaypointIndex !== null && (
+          <View style={styles.moveWaypointBanner}>
+            <Text style={styles.moveWaypointBannerText}>
+              Moving Waypoint {movingWaypointIndex + 1}
+            </Text>
+
+            <Text style={styles.moveWaypointBannerSubText}>
+              Tap a new location on the map
+            </Text>
+          </View>
+        )}
+
         {/*거리 정보*/}
         <View style={styles.distanceBox}>
           <Text style={styles.summaryTitle}>Route Summary</Text>
@@ -502,13 +537,6 @@ export default function HomeScreen(){
                 : "Target distance matched"}
             </Text>
           )}
-
-          {movingWaypointIndex !== null && (
-            <Text style={styles.moveWaypointText}>
-              Moving Waypoint {movingWaypointIndex + 1} - tap a new location
-            </Text>
-          )}
-
           
           {routeError !== "" && (
             <Text style={styles.errorText}>{routeError}</Text>
@@ -547,6 +575,17 @@ export default function HomeScreen(){
             </Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[
+              styles.secondaryFullButton,
+              routeCoordinates.length < 2 && styles.disabledButton,
+            ]}
+            onPress={fitRouteToScreen}
+            disabled={routeCoordinates.length < 2}
+          >
+            <Text style={styles.secondaryFullButtonText}>View Full Route</Text>
+          </TouchableOpacity>
+
           {/*저장 관련*/}
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -581,7 +620,10 @@ export default function HomeScreen(){
             savedRoutes.map((route) => (
               <View
                   key={route.id}
-                  style={styles.savedRouteItem}
+                  style={[
+                    styles.savedRouteItem,
+                    selectedRouteId === route.id && styles.selectedRouteItem,
+                  ]}
               >
                 <TouchableOpacity
                   style={styles.savedRouteContent} 
@@ -615,6 +657,31 @@ const styles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
+  },
+
+  moveWaypointBanner: {
+    position: "absolute",
+    top: 250,
+    left: 20,
+    right: 20,
+    backgroundColor: "white",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    zIndex: 100,
+    elevation: 10,
+  },
+
+  moveWaypointBannerText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  moveWaypointBannerSubText: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#666",
   },
 
   distanceBox: {
@@ -691,6 +758,20 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 17,
     fontWeight: "700",
+  },
+
+  secondaryFullButton: {
+    backgroundColor: "white",
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+
+  secondaryFullButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
   },
 
   secondaryButton: {
@@ -805,6 +886,12 @@ const styles = StyleSheet.create({
 
   savedRouteContent: {
     flex: 1,
+  },
+
+  selectedRouteItem: {
+    backgroundColor: "#f0f0f0",
+    borderRadius: 10,
+    paddingHorizontal: 10,
   },
 
   deleteButton: {
